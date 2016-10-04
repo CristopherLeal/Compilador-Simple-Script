@@ -73,7 +73,7 @@ void teste_sintatico(){
 		p = Action[q][map[a]];
 		//printf("p:%d\n",p );
 		//printf("Top:%d Token:%d Map %d\n", Top(), a, map[a]);
-		printf("Token %d\n",map[a] );
+		//printf("Token %d\n",map[a] );
 		if(IS_SHIFT(p)){
 			Push(p);
 			a= nextToken();
@@ -83,16 +83,15 @@ void teste_sintatico(){
 			r = RULE(p);
 			Pop(Len[r]);
 			Push(Action[Top()][Left[r]]);
-			printf("Rule:%d  Left:%d Len:%d\n", r,Left[r],Len[r]);
+			//printf("Rule:%d  Left:%d Len:%d\n", r,Left[r],Len[r]);
 			Semantics(r);
 		}else{
 			printf("%s\n","erro de sintaxe" );
 			break;
 		}
 		q=Top();
-		show_stack();
+		//show_stack();
 	}while(p != FINAL);
-	
 
 
 	finish_file();

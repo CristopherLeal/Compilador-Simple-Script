@@ -9,13 +9,14 @@
 
 pobject SymbolTable[MAX_NEST_LEVEL];
 pobject SymbolTableLast[MAX_NEST_LEVEL]; 
-static 	int 	nCurrentLevel =0;
+static 	int 	nCurrentLevel =-1;
 
 extern int NewBlock(void);
 extern int EndBlock(void);
 extern pobject Define(int);
 extern pobject Search(int);
 extern pobject Find(int);
+extern void show_level();
 
 
 #endif

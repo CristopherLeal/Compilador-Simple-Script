@@ -68,4 +68,32 @@ void main(){
 	//test_lexical();
 	teste_sintatico();
 	//teste_escopo();	
+
+	/*
+	object * o1, *o2,*o3;
+	o1 = (object*)malloc(sizeof(malloc));
+	o2 = (object*)malloc(sizeof(malloc));
+	o3 = (object*)malloc(sizeof(malloc));
+	o1->nName =1;
+	o1->eKind =1;
+	o1->nName =2;
+	o1->eKind =2;
+	o1->nName =3;
+	o1->eKind =3;
+	t_attrib t1, t2, t3, t;
+	t1._.IDU.obj = o1;
+	t2._.IDU.obj = o2;
+	t3._.IDU.obj = o3;
+	PushSem(t1);
+	PushSem(t2);
+	PushSem(t3);
+
+	object * p;
+
+	//t = TopSem(0);
+	t = t1; 
+	p = t._.IDU.obj;
+	printf("%d\n",(int)p->nName ); 
+	printf("%d\n",p->eKind ); */
+
 }

@@ -20,17 +20,21 @@ pobject Define(int aName){
 
 	obj->nName = aName;
 	obj->pNext =NULL;
+	obj->pPrev = NULL;	
 
 	if(SymbolTable[nCurrentLevel] == NULL){
-
+		printf("%s\n","inseriu o primeiro" );
 		SymbolTable[nCurrentLevel] = obj;
 		SymbolTableLast[nCurrentLevel] = obj;
 
 	}
 	else{
-
-		SymbolTableLast[nCurrentLevel]->pNext = obj;
-		SymbolTableLast[nCurrentLevel] = obj;
+		printf("%s\n","inseriu na frente" );
+		obj->pNext = SymbolTable[nCurrentLevel];
+		SymbolTable[nCurrentLevel]->pPrev = obj;
+		SymbolTable[nCurrentLevel] = obj;
+		//SymbolTableLast[nCurrentLevel]->pNext = obj;
+		//SymbolTableLast[nCurrentLevel] = obj;
 	}
 
 
@@ -71,7 +75,9 @@ pobject Find(int aName){
 	return obj;
 }
 
-
+void show_level(){
+	printf("level %d\n",nCurrentLevel );
+}
 
 #endif
 
