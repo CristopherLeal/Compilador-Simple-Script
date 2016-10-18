@@ -7,6 +7,13 @@
 #include "alerta_erro.h"
 
 
+
+#define INTEGER_SIZE 1
+#define CHAR_SIZE 1
+#define BOOLEAN_SIZE 1
+#define STRING_SIZE 1
+#define UNIVERSAL_SIZE 0
+
 #define true 1
 #define false 0
 
@@ -49,26 +56,34 @@ typedef struct {
 	union{
 
 		struct {
+			int nIndex;
+			int nSize;
 			struct  object * pType;
 		} Var, Param, Field;
 
 		struct {
 			struct object * pRetType;
 			struct object * pParams;
+			int nIndex;
+			int nParam;
+			int nVars;
 		} Function;
 
 		struct {
+			int nSize;
 			struct object *pElemType;
 			int 	nNumElems;
 		} Array;
 
 		struct {
+			int nSize;
 			struct object *pFields;
 		} Struct;
 
 		struct {
+			int nSize;
 			struct object *pBaseType;
-		} Alias;
+		} Alias , Type;
 	}_;
 
 } object , *pobject;
@@ -77,23 +92,23 @@ typedef struct {
 
 
 
+//preenchido com os seguintes campos
+//{ nName , eKind , pNext ,pPrev , _.Type.nSize }
 
-
-
-
-static object int_= { -1, SCALAR_TYPE_ , NULL,NULL};
+static object int_= { -1, SCALAR_TYPE_ , NULL,NULL, INTEGER_SIZE};
 static object * pInteger = &int_;
 
-static object char_ = { -1 ,SCALAR_TYPE_ , NULL,NULL};
+
+static object char_ = { -1 ,SCALAR_TYPE_ , NULL,NULL, CHAR_SIZE};
 static object * pChar = &char_;
 
-static object bool_ = { -1, SCALAR_TYPE_ , NULL,NULL};
+static object bool_ = { -1, SCALAR_TYPE_ , NULL,NULL, BOOLEAN_SIZE};
 static object * pBool = &bool_;
 
-static object string_ = { -1, SCALAR_TYPE_ , NULL,NULL};
+static object string_ = { -1, SCALAR_TYPE_ , NULL,NULL, STRING_SIZE};
 static object * pString = &string_;
 
-static object universal_= { -1, SCALAR_TYPE_ , NULL,NULL};
+static object universal_= { -1, SCALAR_TYPE_ , NULL,NULL,UNIVERSAL_SIZE};
 static object * pUniversal = &universal_;
 
 
@@ -108,10 +123,12 @@ typedef struct attr{
 
 		struct {
 			object * type;
+			int nSize;
 		} T, LV,F,Z,R,L,E;
 
 		struct {
 			object * list;
+			int nSize;
 		} LI , DC ,LP;
 
 		struct {
@@ -139,6 +156,16 @@ typedef struct attr{
 			int err;
 			int n;	
 		}MC,LE;
+
+		struct 
+		{
+			int offset;
+		}MF;
+
+		struct 
+		{
+			int label;
+		}MT, ME, MW;
 
 	}_;
 
@@ -274,7 +301,8 @@ extern int CheckTypes(object *t1, object * t2);
 extern int PushSem(t_attrib attrib);
 extern int PopSem();
 extern t_attrib TopSem(int offFromTop);
-
+extern int newLabel();
+extern int init_out_file(char * filename);
 
 extern void Semantics(int rule);
 

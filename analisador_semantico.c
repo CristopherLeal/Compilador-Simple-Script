@@ -9,6 +9,15 @@
 static t_attrib StackSem[STACK_SEM_MAX_SIZE];     
 static int topSem = -1;  
 static  int first_block_init =0;    
+static FILE * out_file;
+
+int init_out_file(char * filename){
+	out_file = fopen(filename,"w");
+	if(out_file != NULL);
+		return 1;
+	printf("%s\n","ERROR:ARQUIVO NAO ENCONTRADO");		
+}
+
 
 int isemptysem() {
 
@@ -62,33 +71,36 @@ void show_stack_sem(){
    	printf("%s\n","_________________________________________" );
    	*/
    	printf("Stack %d\n", topSem );
-   	printf("s7 %d\n",StackSem[7]._.MC.err );
+   //	printf("s7 %d\n",StackSem[7]._.MC.err );
 }
 
 
  
-
-
-
-
-
-
-
-
+int newLabel(){
+	static int labelNo =0;
+	return labelNo++;
+}
 
 
 void Semantics(int rule){
+
+	static int nFuncs = 0; 
  
-	printf("%s\n", "semantico");
+	//printf("%s\n", "semantico");
     t_attrib IDD, IDU, ID, T , LI, LI0, LI1 , LV, LV1, LV0, LE, LE1, LE0, DC,DC0, DC1,LP, F, F1,F0,
     		 Z, Z1, Z0, R, R1, R0, L, L0, L1, E, E1, E0, TRUE0, FALSE0, CHR, STR, NUM,
-    		 MC, MT, MW, ME,NB ; 
+    		 MC,MF, MT, MW, ME,NB ; 
 	int name;
 	int nParam;
+	//int nField;
+	int nSize;
+	int current;
+	int label, label1, label2;
 	object * p, *q;
 	object * t, *t1, *t2;
 	object * n;
 	object  * f;
+	static object * curFunction = NULL;
 
 	
 	if(!first_block_init){
@@ -102,31 +114,48 @@ void Semantics(int rule){
 
 		
 		case r_T0 :	//T -> integer
+
 			T._.T.type = pInteger;
+			T._.T.nSize = pInteger->_.Type.nSize; 
 			PushSem(T);
 			break;
+
 		case r_T1 :	//T -> char
+
 			T._.T.type = pChar;
+			T._.T.nSize = pChar->_.Type.nSize;
 			PushSem(T);
 			break;
+
 		case r_T2 :	//T -> boolean
+
 			T._.T.type = pBool;
+			T._.T.nSize = pBool->_.Type.nSize;
 			PushSem(T);
 			break;
+
 		case r_T3 :	//T -> string
+
 			T._.T.type = pString;
+			T._.T.nSize = pString->_.Type.nSize;
 			PushSem(T);
 			break;
+
 		case r_T4 :	//T -> IDU 
+
 			printf("%s\n","r_T4");
 			IDU = TopSem(0);
 			PopSem();
 			p = IDU._.IDU.obj;
 			//printf("KIND %s\n",p->eKind );
-			if( IS_TYPE_KIND(p->eKind) || p->eKind == UNIVERSAL_ )
+			if( IS_TYPE_KIND(p->eKind) || p->eKind == UNIVERSAL_ ){
 				T._.T.type = p;
+				T._.T.nSize = p->_.Alias.nSize;
+				printf("\n\n\n ---------------------\n\n\n\%d\n\n\n------------------------\n", T._.T.nSize);
+			}	
 			else{
 				T._.T.type = pUniversal;
+				T._.T.nSize = 0;
 				Error(ERR_TYPE_EXPECTED);
 			}
 			PushSem(T);		
@@ -142,14 +171,14 @@ void Semantics(int rule){
 			LI1 = TopSem(0);
 			PopSem();
 			LI0._.LI.list = IDD._.IDD.obj;
-			printf("idd name %d\n",LI0._.LI.list->nName );
+			//printf("idd name %d\n",LI0._.LI.list->nName );
 			PushSem(LI0); 
 			break;
 
 		case r_LI1 :	//LI -> IDD
 			printf("%s\n","r_LI1");
 			IDD = TopSem(0);
-			printf("idd name %d\n",IDD._.IDD.obj->nName );
+			//printf("idd name %d\n",IDD._.IDD.obj->nName );
 			PopSem();
 			LI._.LI.list = IDD._.IDD.obj;
 			PushSem(LI);
@@ -157,19 +186,26 @@ void Semantics(int rule){
 
 		case r_DV0 :  //DV -> var LI : T ;
 			printf("%s\n","r_DV0");
-			show_level();
+			//show_level();
 			T = TopSem(0);
 			PopSem();
 			LI = TopSem(0);
 			PopSem();
 			p = LI._.LI.list;
 			t = T._.T.type;
+			nSize = curFunction->_.Function.nVars;
+
 			while( p != NULL && p->eKind == NO_KIND_DEF_ ){
 			//	printf("-------var name ----- %d\n",p->nName );
 				p->eKind = VAR_;
 				p->_.Var.pType = t;
+				p->_.Var.nIndex = nSize;
+				p->_.Var.nSize = T._.T.nSize;
+				nSize += T._.T.nSize;
 				p = p->pNext;
 			}
+
+			curFunction->_.Function.nVars = nSize;
 
 			break;		
 
@@ -187,16 +223,22 @@ void Semantics(int rule){
 			PopSem();
 			p = LI._.LI.list;
 			t = T._.T.type;
+			nSize = DC._.DC.nSize;
+
 			while( p != NULL && p->eKind == NO_KIND_DEF_ ){
 			//	printf(" ---- field name -- %d\n",p->nName );
 				p->eKind = FIELD_;
 				p->_.Field.pType = t;
+				p->_.Field.nIndex = nSize;
+				p->_.Field.nSize = T._.T.nSize;
+				nSize = nSize + T._.T.nSize;
+
 			//	printf("KIND%d\n",p->eKind );
 				p = p->pNext;
 
 			}
 			DC._.DC.list = LI._.LI.list;
-		
+			DC._.DC.nSize = nSize;
 			PushSem(DC); 
 			break;
 
@@ -209,16 +251,20 @@ void Semantics(int rule){
 			PopSem();
 			p = LI._.LI.list;
 			t = T._.T.type;
+			nSize = 0;
 			while( p != NULL && p->eKind == NO_KIND_DEF_ ){
 			//	printf(" ---- field name -- %d\n",p->nName );
 				p->eKind = FIELD_;
 				p->_.Field.pType = t;
+				p->_.Field.nIndex = nSize;
+				p->_.Field.nSize = T._.T.nSize;
+				nSize = nSize + T._.T.nSize;
 			//	printf("KIND%d\n",p->eKind );
 				p = p->pNext;
 
 			}
 			DC._.DC.list = LI._.LI.list;
-		
+			DC._.DC.nSize = nSize;
 			PushSem(DC); 
 			break;
 		
@@ -232,14 +278,18 @@ void Semantics(int rule){
 			PopSem();
 			LP = TopSem(0);
 			PopSem();
+			nSize = LP._.LP.nSize;
 			p = IDD._.IDD.obj;
 			t = T._.T.type;
 			p->eKind = PARAM_;
 			p->_.Param.pType = t;
+			p->_.Param.nIndex = nSize;
+			p->_.Param.nSize = T._.T.nSize;
 			LP._.LP.list = p;
+			LP._.LP.nSize = nSize + T._.T.nSize; 
 			PushSem(LP);
-
 			break;
+
 		case r_LP1 :	//LP -> IDD : T
 
 			printf("%s\n", "r_LP1");
@@ -251,30 +301,69 @@ void Semantics(int rule){
 			t = T._.T.type;
 			p->eKind = PARAM_;
 			p->_.Param.pType = t;
+			p->_.Param.nIndex = 0;
+			p->_.Param.nSize = T._.T.nSize;
 			LP._.LP.list = p;
+			LP._.LP.nSize = T._.T.nSize;
 			PushSem(LP);
 			break;
 
 		case r_MF0 :	//MF -> ''	
 
+			printf("@@@@@@@@@@@@@@  MF @@@@@@@@@@@@@@@@@@\n");
+
+
 			T = TopSem(0);
 			LP = TopSem(1);
 			IDD = TopSem(2);
 			f = IDD._.IDD.obj;
-			f->eKind = FUNCTION_;
+			//f->eKind = FUNCTION_;
 			f->_.Function.pRetType = T._.T.type;
 			f->_.Function.pParams = LP._.LP.list;
-			p=LP._.LP.list;
-			while(p!=NULL && p->eKind == PARAM_ ){
-				printf(" ------ parametro  -----------\n" );
-				p = p->pNext;
-			}
+			f->_.Function.nParam = LP._.LP.nSize;
+			f->_.Function.nVars = LP._.LP.nSize;
+			//p=LP._.LP.list;
+			//while(p!=NULL && p->eKind == PARAM_ ){
+			//	printf(" ------ parametro  -----------\n" );
+			//	p = p->pNext;
+			//}
+
+			curFunction = f;
+			
+			fprintf(out_file,"BEGIN_FUNC %d, %d, %02d\n",nFuncs-1, f->_.Function.nParam, 0 );
+			MF._.MF.offset = ftell(out_file) - 3;
+
+			PushSem(MF);
+
 			break;
+
+
+		case r_B0 :	//B -> { LDV LS }
+				printf(" @@@@@@@@@@@@@@ %s @@@@@@@@@@@@2\n","//B -> { LDV LS }	");
+				
+				MF = TopSem(0);
+				IDD = TopSem(3);
+				f = IDD._.IDD.obj;
+				
+				fprintf(out_file, "END_FUNC\n");
+				current = ftell(out_file);
+				fseek(out_file, MF._.MF.offset, SEEK_SET);
+				fprintf(out_file,"%02d", f->_.Function.nVars - f->_.Function.nParam);
+				fseek(out_file,current,SEEK_SET);
+				break;	
+
+
+		case r_B1 :	//B -> { LS }		
+				printf(" @@@@@@@@@@@@@@ %s @@@@@@@@@@@@2\n","//B -> { LS }	");
+				break;
 
 		case r_DF0 : // DF -> function IDD NF ( LP ) : T MF B
 
 				EndBlock();
 				break;
+
+
+
 
 
 		case r_DT0 :	//DT -> type IDD = array [ NUM ] of T ;	
@@ -293,6 +382,7 @@ void Semantics(int rule){
 				p->eKind = ARRAY_TYPE_;
 				p->_.Array.nNumElems = n;
 				p->_.Array.pElemType = t;
+				p->_.Array.nSize = (int) n * T._.T.nSize;
 				break;
 
 		case r_DT1 : //DT -> type IDD = struct NB { DC }
@@ -305,6 +395,7 @@ void Semantics(int rule){
 				p = IDD._.IDD.obj;
 				p->eKind = STRUCT_TYPE_;
 				p->_.Struct.pFields = DC._.DC.list;
+				p->_.Struct.nSize = DC._.DC.nSize;
 
 				EndBlock();
 				break;	
@@ -320,6 +411,7 @@ void Semantics(int rule){
 
 				p->eKind = ALIAS_TYPE_;
 				p->_.Alias.pBaseType = t;
+				p->_.Alias.nSize = T._.T.nSize;
 
 				break;
 
@@ -335,7 +427,7 @@ void Semantics(int rule){
 				}else
 				{
 					p = Define(name);
-					printf("*****\ndefiniu %d\n",name);
+					//printf("*****\ndefiniu %d\n",name);
 				}
 				IDD._.IDD.obj = p;
 				p->eKind = NO_KIND_DEF_;
@@ -348,12 +440,12 @@ void Semantics(int rule){
 				IDU._.IDU.name = name;
 
 				if((p = Find(name)) == NULL){
-					printf("*****\nusou %d\n",name);
+					//printf("*****\nusou %d\n",name);
 					Error(ERR_NOT_DECL);
 				}
 
 				IDU._.IDU.obj = p;
-				printf("-----------------***%d***------------------\n", p->eKind);
+				//printf("-----------------***%d***------------------\n", p->eKind);
 				PushSem(IDU);
 
 			break;
@@ -382,6 +474,9 @@ void Semantics(int rule){
 				Error(ERR_BOOL_TYPE_EXPECTED);
 			E0._.E.type = pBool;
 			PushSem(E0);
+
+			fprintf(out_file, "\tAND\n");
+
 			break;			
 
 		case r_E1 :	//E -> E || L
@@ -396,6 +491,9 @@ void Semantics(int rule){
 				Error(ERR_BOOL_TYPE_EXPECTED);
 			E0._.E.type = pBool;
 			PushSem(E0);
+
+			fprintf(out_file, "\tOR\n");
+
 			break;			
 
 		case r_E2 :	//E -> L	
@@ -436,6 +534,9 @@ void Semantics(int rule){
 				}
 			}	
 			PushSem(LV0);
+
+			fprintf(out_file, "\tADD %d\n", p->_.Field.nIndex );
+
 			break;
 
 		case r_LV1 :	//LV -> LV [ E ]
@@ -460,6 +561,10 @@ void Semantics(int rule){
 			if( !CheckTypes( E._.E.type, pInteger ) ){
 				Error( ERR_INVALID_INDEX_TYPE );
 			}
+
+			fprintf(out_file, "\tMUL %d\n", LV0._.LV.type->_.Type.nSize);
+			fprintf(out_file, "\tADD\n");
+
 			PushSem(LV0);
 			break;
 
@@ -475,8 +580,12 @@ void Semantics(int rule){
 				if( p->eKind != UNIVERSAL_ )
 					Error( ERR_KIND_NOT_VAR );
 				LV._.LV.type = pUniversal;
-			}else{			
+			}else{
+
 				LV._.LV.type = p->_.Var.pType;
+				q = p->_.Var.pType;
+				fprintf(out_file, "\tLOAD_REF %d\n", p->_.Var.nIndex);
+
 			}
 			PushSem(LV);
 			break;
@@ -490,8 +599,12 @@ void Semantics(int rule){
 			E = TopSem(0);
 			PopSem();
 			t = E._.E.type;
+			label = MT._.MT.label;
 			if( !CheckTypes(t, pBool) )
 				Error( ERR_BOOL_TYPE_EXPECTED);
+
+			fprintf(out_file, "L%d:\n",label );
+
 			break;
 
 		case r_S1 :	//S -> if ( E ) MT S else ME S
@@ -505,6 +618,11 @@ void Semantics(int rule){
 			t = E._.E.type;
 			if( !CheckTypes(t, pBool) )
 				Error( ERR_BOOL_TYPE_EXPECTED);
+
+			label = ME._.ME.label;
+			fprintf(out_file, "L%d:\n",label );
+
+
 			break; 
 
 		case r_S2 : //S -> while MW ( E ) MT S
@@ -517,7 +635,12 @@ void Semantics(int rule){
 			PopSem();
 			t = E._.E.type;
 			if( !CheckTypes(t, pBool) )
-				Error( ERR_BOOL_TYPE_EXPECTED);			
+				Error( ERR_BOOL_TYPE_EXPECTED);
+
+			label1 = MW._.MW.label;
+			label2 = MT._.MT.label;
+			fprintf(out_file, "\tJMP_BW L%d\nL%d:\n",label1 ,label2);
+
 			break; 
 
 		case r_S3 :	//S -> do MW S while ( E ) ;
@@ -529,6 +652,10 @@ void Semantics(int rule){
 			t = E._.E.type;
 			if( !CheckTypes(t, pBool) )
 				Error( ERR_BOOL_TYPE_EXPECTED);	
+
+			label = MW._.MW.label;
+			fprintf(out_file, "\tNOT\n\tTJMP_BW L%d\n",label );
+
 			break;
 
 		case r_S4:  //S -> NB B
@@ -540,13 +667,24 @@ void Semantics(int rule){
 
 			E = TopSem(0);
 			PopSem();
+
+			fprintf(out_file,"\tPOP\n");
+
 			break;
 
 		case r_S6 :	//S -> break ;
+
+			fprintf(out_file, "\tJMP_FW L\n");
 			break;
+
 		case r_S7 :	//S -> continue ;
+
+			fprintf(out_file, "\tJMP_BW L\n");
 			break;
+
 		case r_S8 :	//S -> return E ;
+
+			fprintf(out_file, "\tRET\n" );
 			break;
 
 
@@ -561,6 +699,9 @@ void Semantics(int rule){
 				Error(ERR_TYPE_MISMATCH);
 			L0._.L.type = pBool;
 			PushSem(L0);
+
+			fprintf(out_file, "\tLT\n");
+
 			break;
 
 		case r_L1 :	//L -> L > R
@@ -573,6 +714,9 @@ void Semantics(int rule){
 				Error(ERR_TYPE_MISMATCH);
 			L0._.L.type = pBool;
 			PushSem(L0);
+
+			fprintf(out_file, "\tGT\n");
+
 			break;
 
 		case r_L2 :	//L -> L <= R
@@ -585,6 +729,9 @@ void Semantics(int rule){
 				Error(ERR_TYPE_MISMATCH);
 			L0._.L.type = pBool;
 			PushSem(L0);
+
+			fprintf(out_file, "\tLE\n");
+
 			break;
 
 		case r_L3 :	//L -> L >= R
@@ -597,6 +744,9 @@ void Semantics(int rule){
 				Error(ERR_TYPE_MISMATCH);
 			L0._.L.type = pBool;
 			PushSem(L0);
+
+			fprintf(out_file, "\tGE\n");
+
 			break;
 
 		case r_L4 :	//L -> L == R
@@ -609,6 +759,9 @@ void Semantics(int rule){
 				Error(ERR_TYPE_MISMATCH);
 			L0._.L.type = pBool;
 			PushSem(L0);
+
+			fprintf(out_file, "\tEQ\n");
+
 			break;
 
 		case r_L5 :	//L -> L != R
@@ -621,6 +774,9 @@ void Semantics(int rule){
 				Error(ERR_TYPE_MISMATCH);
 			L0._.L.type = pBool;
 			PushSem(L0);
+
+			fprintf(out_file, "\tNE\n");
+
 			break;
 
 		case r_L6 :	//L -> R
@@ -647,6 +803,9 @@ void Semantics(int rule){
 				Error(ERR_INVALID_TYPE);
 			R0._.R.type = R1._.R.type;
 			PushSem(R0);
+
+			fprintf(out_file, "\tADD\n");
+
 			break;
 
 		case r_R1 :	//R -> R - Z
@@ -661,6 +820,9 @@ void Semantics(int rule){
 				Error(ERR_INVALID_TYPE);
 			R0._.R.type = R1._.R.type;
 			PushSem(R0);
+
+			fprintf(out_file, "\tSUB\n");
+
 			break;
 
 		case r_R2 :	//R -> Z
@@ -685,6 +847,9 @@ void Semantics(int rule){
 			if(!CheckTypes(Z1._.Z.type, pInteger))
 				Error(ERR_INVALID_TYPE);
 			PushSem(Z1);
+
+			fprintf(out_file, "\tMUL\n");
+
 			break;	
 
 		case r_Z1 :	//Z -> Z / F
@@ -699,6 +864,9 @@ void Semantics(int rule){
 			if(!CheckTypes(Z1._.Z.type, pInteger))
 				Error(ERR_INVALID_TYPE);
 			PushSem(Z1);
+
+			fprintf(out_file, "\tDIV\n");
+
 			break;
 
 		case r_Z2 :	//Z -> F
@@ -719,7 +887,12 @@ void Semantics(int rule){
 			LV = TopSem(0);
 			PopSem();
 			F._.F.type = LV._.LV.type;
+
+
 			PushSem(F);
+
+			fprintf(out_file, "\tDE_REF %d\n", LV._.LV.type->_.Type.nSize );
+
 			break;
 
 		case r_F1:	//F -> ++ LV
@@ -730,6 +903,9 @@ void Semantics(int rule){
 				Error(ERR_INVALID_TYPE);
 			F._.F.type = pInteger; 
 			PushSem(F);
+
+			fprintf(out_file, "\tDUP\n\tDUP\n\tDE_REF 1\n\tINC\n\tSTORE_REF 1\n\tDE_REF 1\n");
+
 			break;	
 
 		case r_F2:	//F -> -- LV
@@ -741,6 +917,9 @@ void Semantics(int rule){
 				Error(ERR_INVALID_TYPE);
 			F._.F.type = pInteger; 
 			PushSem(F);
+
+			fprintf(out_file, "\tDUP\n\tDUP\n\tDE_REF 1\n\tDEC\n\tSTORE_REF 1\n\tDE_REF 1\n");
+
 			break;
 
 		case r_F3:	//F -> LV ++
@@ -752,6 +931,9 @@ void Semantics(int rule){
 				Error(ERR_INVALID_TYPE);
 			F._.F.type = pInteger; 
 			PushSem(F);
+
+			fprintf(out_file, "\tDUP\n\tDUP\n\tDE_REF 1\n\tINC\n\tSTORE_REF 1\n\tDE_REF 1\n\tDEC\n");
+
 			break;
 
 		case r_F4:	//F -> LV --
@@ -763,6 +945,9 @@ void Semantics(int rule){
 				Error(ERR_INVALID_TYPE);
 			F._.F.type = pInteger; 
 			PushSem(F);
+
+			fprintf(out_file, "\tDUP\n\tDUP\n\tDE_REF 1\n\tDEC\n\tSTORE_REF 1\n\tDE_REF 1\n\tINC\n");
+
 			break;
 
 		case r_F5:	//F -> LV MA = E
@@ -777,21 +962,29 @@ void Semantics(int rule){
 				Error( ERR_TYPE_MISMATCH );
 			F._.F.type = t2;
 			PushSem(F);
+
+			fprintf(out_file, "\tSTORE_REF %d\n", t1->_.Type.nSize);
+			fprintf(out_file, "\tDE_REF %d\n", t1->_.Type.nSize);
+
 			break;
 
 		case r_F6:	//F -> IDU MC ( LE )
-				printf("%s","F -> IDU MC ( LE )");
+				//printf("%s","F -> IDU MC ( LE )");
 				LE = TopSem(0);
 				PopSem();
 				MC = TopSem(0);
 				PopSem();
 				IDU = TopSem(0);
 				PopSem();
+				f = IDU._.IDU.obj;
 				F._.F.type = MC._.MC.type;
 				if(!MC._.MC.err){
 					if( LE._.LE.param != NULL && LE._.LE.param->eKind == PARAM_)
 						Error(ERR_TOO_FEW_ARGS);
 				}
+
+				fprintf(out_file, "\tCALL %d\n", f->_.Function.nIndex );
+
 				PushSem(F);
 				break;
 
@@ -805,6 +998,9 @@ void Semantics(int rule){
 				Error(ERR_INVALID_TYPE);
 			F0._.F.type = pInteger;
 			PushSem(F0);
+
+			fprintf(out_file, "\tNEG\n");
+
 			break;
 				
 		case r_F8:	//F -> ! F
@@ -816,6 +1012,9 @@ void Semantics(int rule){
 				Error(ERR_INVALID_TYPE);
 			F0._.F.type = pBool;
 			PushSem(F0);
+
+			fprintf(out_file, "\tNOT\n");
+
 			break;
 
 		case r_F9:	//F -> TRUE
@@ -824,6 +1023,9 @@ void Semantics(int rule){
 			PopSem();
 			F._.F.type = pBool;
 			PushSem(F);
+
+			fprintf(out_file, "\tLOAD_TRUE\n" );
+
 			break;
 
 		case r_F10:	//F -> FALSE
@@ -832,6 +1034,9 @@ void Semantics(int rule){
 			PopSem();
 			F._.F.type = pBool;
 			PushSem(F);
+
+			fprintf(out_file, "\tLOAD_FALSE \n" );
+
 			break;
 
 		case r_F11:	//F -> CHR
@@ -840,6 +1045,9 @@ void Semantics(int rule){
 			PopSem();
 			F._.F.type = pChar;
 			PushSem(F);
+
+			fprintf(out_file, "\tLOAD_CONST %d\n",CHR._.CHR.pos );
+
 			break;
 
 		case r_F12:	//F -> STR
@@ -848,6 +1056,9 @@ void Semantics(int rule){
 			PopSem();
 			F._.F.type = pString;
 			PushSem(F);
+
+			fprintf(out_file, "\tLOAD_CONST %d\n",STR._.STR.pos );
+
 			break;
 
 		case r_F13:	//F -> NUM
@@ -856,13 +1067,16 @@ void Semantics(int rule){
 			PopSem();
 			F._.F.type = pInteger;
 			PushSem(F);
+
+			fprintf(out_file, "\tLOAD_CONST %d\n",NUM._.NUM.pos );
+
 			break;
 
 	
 
 		case r_LE0 :	//LE -> LE , E
 
-			printf("%s\n"," ++++++++++++++++ r_LE0 ++++++++++++++++++");	
+			printf("%s\n","r_LE0");	
 			E = TopSem(0);
 			PopSem();
 			LE1 = TopSem(0);
@@ -887,11 +1101,11 @@ void Semantics(int rule){
 				LE0._.LE.n = nParam+1;
 			}
 			PushSem(LE0);	
-		
 			break;
+
 		case r_LE1 :	//LE -> E	
 
-			printf(" !!!!!!!!!!!!!!!!!!!!!!!!!! %s\n","r_LE1");	
+			printf("%s\n","r_LE1");	
 			E = TopSem(0);
 			PopSem();
 			MC = TopSem(0);
@@ -901,7 +1115,7 @@ void Semantics(int rule){
 			nParam = 1;
 			if( !MC._.MC.err )
 			{
-				printf("%s\n"," ---------------entrou +++++++++++++++++++" );	
+				//printf("%s\n"," ---------------entrou +++++++++++++++++++" );	
 				p = MC._.MC.param;
 				if( p == NULL || p->eKind != PARAM_){
 					Error(ERR_TOO_MANY_ARGS);
@@ -930,6 +1144,13 @@ void Semantics(int rule){
 
 		case r_NF0: //NF -> ''
 		
+			IDD = TopSem(0);
+			f = IDD._.IDD.obj;
+			f->eKind = FUNCTION_;
+			f->_.Function.nParam = 0;
+			f->_.Function.nVars = 0;
+			f->_.Function.nIndex = nFuncs++;
+
 			NewBlock();
 			break;	
 
@@ -956,26 +1177,47 @@ void Semantics(int rule){
 
 				MC._.MC.param = p;
 				MC._.MC.err = false;
-				printf("%s\n","err = false" );
-				printf("%d\n",MC._.MC.err );
+				//printf("%s\n","err = false" );
+				//printf("%d\n",MC._.MC.err );
 			}
 			PushSem(MC);
 			break;
 
 		case r_MT0 :	//MT -> ''
 
+			label = newLabel();
+			MT._.MT.label = label;
+			fprintf(out_file, "\tTJMP_FW L%d\n", label);
 			PushSem(MT);
 			break;
 
 		case r_ME0 : //ME -> ''
 
+			MT = TopSem(0);
+			label1 =  MT._.MT.label;
+			label2 = newLabel();
+			ME._.ME.label = label2;
 			PushSem(ME);
+
+			fprintf(out_file, "\tJMP_FW L%d\nL%d:\n", label2, label1);
+
 			break;
 
 		case r_MW0 :	//MW -> ''	
 
-			PushSem(MW);
+			label = newLabel();
+			MW._.MW.label = label;
+			PushSem(MW);	
+
+			fprintf(out_file, "L%d:\n", label);
+
 			break;
+
+		case r_MA0 ://MA -> ''
+
+			fprintf(out_file, "\tDUP\n" );
+
+			break;	
 
 
 

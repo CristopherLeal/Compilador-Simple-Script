@@ -23,13 +23,13 @@ pobject Define(int aName){
 	obj->pPrev = NULL;	
 
 	if(SymbolTable[nCurrentLevel] == NULL){
-		printf("%s\n","inseriu o primeiro" );
+		//printf("%s\n","inseriu o primeiro" );
 		SymbolTable[nCurrentLevel] = obj;
 		SymbolTableLast[nCurrentLevel] = obj;
 
 	}
 	else{
-		printf("%s\n","inseriu na frente" );
+		//printf("%s\n","inseriu na frente" );
 		obj->pNext = SymbolTable[nCurrentLevel];
 		SymbolTable[nCurrentLevel]->pPrev = obj;
 		SymbolTable[nCurrentLevel] = obj;

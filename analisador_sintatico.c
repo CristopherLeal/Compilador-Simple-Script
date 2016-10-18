@@ -62,6 +62,7 @@ map[EOF_]=49;
 void teste_sintatico(){
 
 	init_file("programa.ss");
+	init_out_file("saida");
 	init_map();
 
 	int p;

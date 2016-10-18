@@ -1,6 +1,7 @@
 #include "analisador_lexico.h"
 #include "analisador_sintatico.h"
 #include "analisador_escopo.h"
+#include "analisador_semantico.h"
 
 void test_lexical(){
 
@@ -66,6 +67,7 @@ void teste_escopo(){
 void main(){
 
 	//test_lexical();
+	init_out_file("saida");
 	teste_sintatico();
 	//teste_escopo();	
 
